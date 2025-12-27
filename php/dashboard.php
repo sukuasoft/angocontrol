@@ -11,115 +11,132 @@ if (!isAuthenticated()) {
     }
 }
 
-// Dados de estatísticas
-$stats = [
-    [
-        'title' => 'Total de Dispositivos',
-        'value' => '11',
-        'subtitle' => 'Conectados',
-        'icon' => 'home',
-        'trend' => ['value' => '+2', 'positive' => true]
-    ],
-    [
-        'title' => 'Dispositivos Ativos',
-        'value' => '8',
-        'subtitle' => 'Em funcionamento',
-        'icon' => 'zap',
-        'iconColor' => 'success'
-    ],
-    [
-        'title' => 'Offline',
-        'value' => '1',
-        'subtitle' => 'Requer atenção',
-        'icon' => 'wifi-off',
-        'iconColor' => 'destructive'
-    ],
-    [
-        'title' => 'Modo Eco',
-        'value' => '2',
-        'subtitle' => 'Economia de energia',
-        'icon' => 'activity',
-        'iconColor' => 'warning'
-    ]
-];
+// Estatísticas do dashboard
+function getDashboardStats(PDO $pdo, int $userId): array {
+    $stmt = $pdo->prepare(
+        "SELECT
+            COUNT(*) AS total,
+            SUM(status = 'active') AS active,
+            SUM(status = 'offline') AS offline,
+            SUM(status = 'eco') AS eco
+        FROM devices
+        WHERE user_id = ?"
+    );
+    $stmt->execute([$userId]);
+    $totals = $stmt->fetch();
 
-// Dados de dispositivos
-$devices = [
-    [
-        'id' => 1,
-        'name' => 'Luzes Sala',
-        'room' => 'Sala de Estar',
-        'type' => 'Iluminação',
-        'icon' => 'lightbulb',
-        'status' => 'active',
-        'performance' => 85
-    ],
-    [
-        'id' => 2,
-        'name' => 'TV Samsung',
-        'room' => 'Sala de Estar',
-        'type' => 'Entretenimento',
-        'icon' => 'tv',
-        'status' => 'active',
-        'performance' => 92
-    ],
-    [
-        'id' => 3,
-        'name' => 'Ar Condicionado',
-        'room' => 'Quarto Master',
-        'type' => 'Climatização',
-        'icon' => 'wind',
-        'status' => 'eco',
-        'performance' => 67
-    ],
-    [
-        'id' => 4,
-        'name' => 'Câmera Entrada',
-        'room' => 'Entrada',
-        'type' => 'Segurança',
-        'icon' => 'camera',
-        'status' => 'active',
-        'performance' => 98
-    ],
-    [
-        'id' => 5,
-        'name' => 'Fechadura Digital',
-        'room' => 'Porta Principal',
-        'type' => 'Segurança',
-        'icon' => 'lock',
-        'status' => 'offline'
-    ],
-    [
-        'id' => 6,
-        'name' => 'Termostato',
-        'room' => 'Cozinha',
-        'type' => 'Climatização',
-        'icon' => 'thermometer',
-        'status' => 'active',
-        'performance' => 76
-    ]
-];
+    $total = (int) ($totals['total'] ?? 0);
+    $active = (int) ($totals['active'] ?? 0);
+    $offline = (int) ($totals['offline'] ?? 0);
+    $eco = (int) ($totals['eco'] ?? 0);
 
-// Dados de consumo mensal
-$energyData = [
-    ['period' => 'Janeiro', 'consumption' => 245],
-    ['period' => 'Fevereiro', 'consumption' => 267],
-    ['period' => 'Março', 'consumption' => 234],
-    ['period' => 'Abril', 'consumption' => 278],
-    ['period' => 'Maio', 'consumption' => 198],
-    ['period' => 'Junho', 'consumption' => 223]
-];
+    return [
+        [
+            'title' => 'Total de Dispositivos',
+            'value' => (string) $total,
+            'subtitle' => 'Conectados',
+            'icon' => 'home'
+        ],
+        [
+            'title' => 'Dispositivos Ativos',
+            'value' => (string) $active,
+            'subtitle' => 'Em funcionamento',
+            'icon' => 'zap',
+            'iconColor' => 'success'
+        ],
+        [
+            'title' => 'Offline',
+            'value' => (string) $offline,
+            'subtitle' => 'Requer atenção',
+            'icon' => 'wifi-off',
+            'iconColor' => 'destructive'
+        ],
+        [
+            'title' => 'Modo Eco',
+            'value' => (string) $eco,
+            'subtitle' => 'Economia de energia',
+            'icon' => 'activity',
+            'iconColor' => 'warning'
+        ]
+    ];
+}
 
-// Dados de consumo em tempo real
-$realtimeData = [
-    ['time' => '00:00', 'consumption' => 2.1],
-    ['time' => '04:00', 'consumption' => 1.8],
-    ['time' => '08:00', 'consumption' => 3.2],
-    ['time' => '12:00', 'consumption' => 4.5],
-    ['time' => '16:00', 'consumption' => 3.8],
-    ['time' => '20:00', 'consumption' => 5.2],
-    ['time' => '24:00', 'consumption' => 2.9]
-];
+// Dispositivos recentes
+function getRecentDevices(PDO $pdo, int $userId): array {
+    $stmt = $pdo->prepare(
+        "SELECT 
+            d.id,
+            d.name,
+            COALESCE(r.name, 'Sem cômodo') AS room,
+            COALESCE(dt.name, 'Dispositivo') AS type,
+            COALESCE(dt.icon, 'cpu') AS icon,
+            d.status,
+            d.performance
+        FROM devices d
+        LEFT JOIN rooms r ON d.room_id = r.id
+        LEFT JOIN device_types dt ON d.type_id = dt.id
+        WHERE d.user_id = ?
+        ORDER BY d.updated_at DESC
+        LIMIT 12"
+    );
+    $stmt->execute([$userId]);
+    return $stmt->fetchAll() ?: [];
+}
+
+// Consumo mensal (últimos 6 meses)
+function getEnergyData(PDO $pdo, int $userId): array {
+    $stmt = $pdo->prepare(
+        "SELECT 
+            DATE_FORMAT(timestamp, '%Y-%m') AS period_key,
+            DATE_FORMAT(timestamp, '%b/%y') AS period_label,
+            SUM(consumption) AS total_consumption
+        FROM energy_logs
+        WHERE user_id = ?
+          AND timestamp >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+        GROUP BY period_key, period_label
+        ORDER BY period_key ASC"
+    );
+    $stmt->execute([$userId]);
+    $rows = $stmt->fetchAll();
+
+    return array_map(function ($row) {
+        return [
+            'period' => $row['period_label'],
+            'consumption' => (float) $row['total_consumption']
+        ];
+    }, $rows ?: []);
+}
+
+// Consumo em tempo real (últimos 24 registros)
+function getRealtimeData(PDO $pdo, int $userId): array {
+    $stmt = $pdo->prepare(
+        "SELECT 
+            DATE_FORMAT(timestamp, '%H:%i') AS time_label,
+            consumption
+        FROM energy_logs
+        WHERE user_id = ?
+        ORDER BY timestamp DESC
+        LIMIT 24"
+    );
+    $stmt->execute([$userId]);
+    $rows = $stmt->fetchAll();
+
+    $data = array_map(function ($row) {
+        return [
+            'time' => $row['time_label'],
+            'consumption' => (float) $row['consumption']
+        ];
+    }, $rows ?: []);
+
+    return array_reverse($data);
+}
+
+$userId = (int) $_SESSION['user_id'];
+
+$stats = getDashboardStats($pdo, $userId);
+$devices = getRecentDevices($pdo, $userId);
+$energyData = getEnergyData($pdo, $userId);
+$realtimeData = getRealtimeData($pdo, $userId);
 
 // Se for requisição AJAX, retornar JSON
 if (isAjax()) {
@@ -139,7 +156,7 @@ return [
     'energyData' => $energyData,
     'realtimeData' => $realtimeData,
     'user' => [
-        'name' => $_SESSION['user_name'] ?? 'Lando F',
+        'name' => $_SESSION['user_name'] ?? 'Usuário',
         'role' => $_SESSION['user_role'] ?? 'Administrador'
     ]
 ];

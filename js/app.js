@@ -3,6 +3,7 @@ const App = {
     currentPage: 'dashboard',
     theme: localStorage.getItem('theme') || 'light',
     sidebarCollapsed: false,
+    dashboardData: null,
     
     // Initialize the application
     init() {
@@ -82,24 +83,39 @@ const App = {
     },
     
     // Load page content
-    loadPage(page) {
+    async loadPage(page) {
         const content = document.getElementById('main-content');
         content.innerHTML = '<div class="loading">Carregando...</div>';
-        
-        // In a real application, this would fetch from PHP
-        // For now, we'll load the content directly
-        setTimeout(() => {
-            content.innerHTML = this.getPageContent(page);
-            this.initPageScripts(page);
+
+        if (page === 'dashboard') {
+            try {
+                this.dashboardData = await API.getDashboard();
+                content.innerHTML = this.renderDashboard(this.dashboardData);
+                this.initPageScripts(page, this.dashboardData);
+            } catch (error) {
+                console.error('Erro ao carregar dashboard:', error);
+                content.innerHTML = `
+                    <div class="card" style="color: var(--color-destructive);">
+                        <h3 class="card-title">Erro ao carregar dados</h3>
+                        <p class="text-muted">${error.message || 'Tente novamente mais tarde.'}</p>
+                        <p class="text-muted" style="font-size: 0.85rem; margin-top: 0.5rem;">Verifique se a sessão está ativa e se php/dashboard.php retorna JSON.</p>
+                    </div>
+                `;
+            }
             this.initLucideIcons();
-        }, 100);
+            return;
+        }
+
+        content.innerHTML = this.getPageContent(page);
+        this.initPageScripts(page);
+        this.initLucideIcons();
     },
     
     // Get page content based on page name
     getPageContent(page) {
         switch(page) {
             case 'dashboard':
-                return this.getDashboardContent();
+                return this.dashboardData ? this.renderDashboard(this.dashboardData) : '<div class="loading">Carregando...</div>';
             case 'dispositivos':
                 return this.getDispositivosContent();
             case 'monitoramento':
@@ -121,16 +137,18 @@ const App = {
         }
     },
     
-    // Dashboard content
-    getDashboardContent() {
+    // Dashboard content rendered from API data
+    renderDashboard(data) {
+        const userName = (window.userData && window.userData.name) || 'Usuário';
+        const greetingIcon = this.theme === 'dark' ? '🌙' : '☀️';
+
         return `
             <div class="space-y-6">
-                <!-- Welcome Header -->
                 <div class="flex items-center justify-between">
                     <div>
                         <h1 class="text-3xl font-bold flex items-center gap-2">
-                            Olá, Lando F! 
-                            <span class="text-2xl">☀️</span>
+                            Olá, ${userName}! 
+                            <span class="text-2xl">${greetingIcon}</span>
                         </h1>
                         <p class="text-muted">Bem-vindo ao painel de controle da sua casa inteligente</p>
                     </div>
@@ -139,56 +157,23 @@ const App = {
                     </button>
                 </div>
 
-                <!-- Stats Grid -->
                 <div class="grid grid-cols-4">
-                    ${this.createStatsCard({
-                        title: 'Total de Dispositivos',
-                        value: '11',
-                        subtitle: 'Conectados',
-                        icon: 'home',
-                        trend: { value: '+2', positive: true }
-                    })}
-                    ${this.createStatsCard({
-                        title: 'Dispositivos Ativos',
-                        value: '8',
-                        subtitle: 'Em funcionamento',
-                        icon: 'zap',
-                        iconColor: 'success'
-                    })}
-                    ${this.createStatsCard({
-                        title: 'Offline',
-                        value: '1',
-                        subtitle: 'Requer atenção',
-                        icon: 'wifi-off',
-                        iconColor: 'destructive'
-                    })}
-                    ${this.createStatsCard({
-                        title: 'Modo Eco',
-                        value: '2',
-                        subtitle: 'Economia de energia',
-                        icon: 'activity',
-                        iconColor: 'warning'
-                    })}
+                    ${(data?.stats || []).map(stat => this.createStatsCard(stat)).join('') || '<p class="text-muted">Sem dados de estatísticas.</p>'}
                 </div>
 
-                <!-- Main Content Grid -->
                 <div class="grid grid-cols-3">
-                    <!-- Energy Consumption -->
                     <div style="grid-column: span 2;">
                         <div class="space-y-6">
-                            ${this.createEnergyCard()}
-                            ${this.createRealtimeCard()}
+                            ${this.createEnergyCard(data?.energyData || [])}
+                            ${this.createRealtimeCard(data?.realtimeData || [])}
                         </div>
                     </div>
-
-                    <!-- Quick Actions -->
                     <div>
                         ${this.createQuickActionsCard()}
                     </div>
                 </div>
 
-                <!-- Recent Devices -->
-                ${this.createRecentDevicesCard()}
+                ${this.createRecentDevicesCard(data?.devices || [])}
             </div>
         `;
     },
@@ -213,16 +198,21 @@ const App = {
     },
     
     // Create energy card
-    createEnergyCard() {
-        const energyData = [
-            { period: 'Janeiro', consumption: 245 },
-            { period: 'Fevereiro', consumption: 267 },
-            { period: 'Março', consumption: 234 },
-            { period: 'Abril', consumption: 278 },
-            { period: 'Maio', consumption: 198 },
-            { period: 'Junho', consumption: 223 }
-        ];
-        
+    createEnergyCard(energyData) {
+        if (!energyData.length) {
+            return `
+                <div class="card animate-fade-in">
+                    <div class="card-header">
+                        <h3 class="card-title">Consumo Mensal</h3>
+                        <p class="card-subtitle">Sem registros de consumo</p>
+                    </div>
+                    <p class="text-muted">Adicione medições em energy_logs para ver o histórico.</p>
+                </div>
+            `;
+        }
+
+        const maxConsumption = Math.max(...energyData.map(item => item.consumption), 1);
+
         return `
             <div class="card animate-fade-in">
                 <div class="card-header">
@@ -231,13 +221,7 @@ const App = {
                             <h3 class="card-title">Consumo Mensal</h3>
                             <p class="card-subtitle">Últimos 6 meses</p>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <div style="text-align: right;">
-                                <p class="text-2xl font-bold">223 KZ</p>
-                                <p style="font-size: 0.875rem; color: var(--color-success); font-weight: 600;">↓ 12% menor</p>
-                            </div>
-                            <i data-lucide="bar-chart-3" style="width: 2rem; height: 2rem; color: var(--color-primary);"></i>
-                        </div>
+                        <i data-lucide="bar-chart-3" style="width: 2rem; height: 2rem; color: var(--color-primary);"></i>
                     </div>
                 </div>
                 <div>
@@ -246,7 +230,7 @@ const App = {
                             <span style="font-size: 0.875rem; color: var(--color-muted-foreground); width: 5rem;">${item.period}</span>
                             <div style="flex: 1; margin: 0 1rem;">
                                 <div class="progress-bar">
-                                    <div class="progress-fill" style="width: ${(item.consumption / 300) * 100}%;"></div>
+                                    <div class="progress-fill" style="width: ${(item.consumption / maxConsumption) * 100}%;"></div>
                                 </div>
                             </div>
                             <span style="font-size: 0.875rem; font-weight: 600; width: 4rem; text-align: right;">${item.consumption} KZ</span>
@@ -258,17 +242,21 @@ const App = {
     },
     
     // Create realtime card
-    createRealtimeCard() {
-        const realtimeData = [
-            { time: '00:00', consumption: 2.1 },
-            { time: '04:00', consumption: 1.8 },
-            { time: '08:00', consumption: 3.2 },
-            { time: '12:00', consumption: 4.5 },
-            { time: '16:00', consumption: 3.8 },
-            { time: '20:00', consumption: 5.2 },
-            { time: '24:00', consumption: 2.9 }
-        ];
-        
+    createRealtimeCard(realtimeData) {
+        if (!realtimeData.length) {
+            return `
+                <div class="card animate-fade-in">
+                    <div class="card-header">
+                        <h3 class="card-title">Consumo em Tempo Real</h3>
+                        <p class="card-subtitle">Sem registros das últimas horas</p>
+                    </div>
+                    <p class="text-muted">Adicione medições para visualizar o gráfico.</p>
+                </div>
+            `;
+        }
+
+        const maxConsumption = Math.max(...realtimeData.map(item => item.consumption), 1);
+
         return `
             <div class="card animate-fade-in">
                 <div class="card-header">
@@ -281,16 +269,12 @@ const App = {
                             <span style="font-size: 0.875rem; color: var(--color-muted-foreground); width: 4rem;">${item.time}</span>
                             <div style="flex: 1; margin: 0 1rem;">
                                 <div class="progress-bar">
-                                    <div class="progress-fill" style="width: ${(item.consumption / 6) * 100}%;"></div>
+                                    <div class="progress-fill" style="width: ${(item.consumption / maxConsumption) * 100}%;"></div>
                                 </div>
                             </div>
                             <span style="font-size: 0.875rem; font-weight: 600; width: 3rem; text-align: right;">${item.consumption} KZ</span>
                         </div>
                     `).join('')}
-                    <div style="margin-top: var(--spacing-lg); padding: var(--spacing-md); background-color: var(--color-primary-soft); border-radius: var(--radius-lg);">
-                        <p style="font-size: 0.875rem; font-weight: 600;">Consumo atual: 3.8 KZ/h</p>
-                        <p style="font-size: 0.75rem; color: var(--color-muted-foreground);">Pico hoje: 5.2 KZ às 20:00</p>
-                    </div>
                 </div>
             </div>
         `;
@@ -327,16 +311,7 @@ const App = {
     },
     
     // Create recent devices card
-    createRecentDevicesCard() {
-        const devices = [
-            { name: 'Luzes Sala', room: 'Sala de Estar', type: 'Iluminação', icon: 'lightbulb', status: 'active', performance: 85 },
-            { name: 'TV Samsung', room: 'Sala de Estar', type: 'Entretenimento', icon: 'tv', status: 'active', performance: 92 },
-            { name: 'Ar Condicionado', room: 'Quarto Master', type: 'Climatização', icon: 'wind', status: 'eco', performance: 67 },
-            { name: 'Câmera Entrada', room: 'Entrada', type: 'Segurança', icon: 'camera', status: 'active', performance: 98 },
-            { name: 'Fechadura Digital', room: 'Porta Principal', type: 'Segurança', icon: 'lock', status: 'offline' },
-            { name: 'Termostato', room: 'Cozinha', type: 'Climatização', icon: 'thermometer', status: 'active', performance: 76 }
-        ];
-        
+    createRecentDevicesCard(devices) {
         return `
             <div class="card animate-fade-in">
                 <div class="card-header">
@@ -351,14 +326,14 @@ const App = {
                     </div>
                 </div>
                 <div class="grid grid-cols-4" style="max-height: 24rem; overflow-y: auto;">
-                    ${devices.map((device, index) => this.createDeviceCard(device, index)).join('')}
+                    ${devices.length ? devices.map(device => this.createDeviceCard(device)).join('') : '<p class="text-muted">Nenhum dispositivo cadastrado.</p>'}
                 </div>
             </div>
         `;
     },
     
     // Create device card
-    createDeviceCard(device, index) {
+    createDeviceCard(device) {
         const statusConfig = {
             active: { label: 'Ativo', variant: 'default', color: 'active' },
             inactive: { label: 'Inativo', variant: 'secondary', color: 'inactive' },
@@ -366,7 +341,7 @@ const App = {
             eco: { label: 'Eco', variant: 'outline', color: 'eco' }
         };
         
-        const statusInfo = statusConfig[device.status];
+        const statusInfo = statusConfig[device.status] || statusConfig.inactive;
         const isOnline = device.status !== 'offline';
         
         return `
@@ -406,8 +381,9 @@ const App = {
                           device.status === 'offline' ? 'Desconectado' : 'Desligado'}
                     </span>
                     <div class="switch ${device.status === 'active' ? 'checked' : ''} ${!isOnline ? 'disabled' : ''}" 
-                         data-device="${index}" 
-                         onclick="App.toggleDevice(${index}, ${device.status === 'active'})">
+                         data-device-id="${device.id}" 
+                         data-status="${device.status}" 
+                         onclick="App.toggleDevice(${device.id}, '${device.status}')">
                         <div class="switch-thumb"></div>
                     </div>
                 </div>
@@ -518,10 +494,22 @@ const App = {
     },
     
     // Toggle device state
-    toggleDevice(index, currentState) {
-        console.log(`Device ${index} toggled to ${!currentState}`);
-        // Here you would make an API call to PHP backend
-        // For now, just toggle the UI
+    async toggleDevice(id, currentStatus) {
+        if (currentStatus === 'offline') {
+            alert('Não é possível alternar um dispositivo offline.');
+            return;
+        }
+
+        try {
+            await API.toggleDevice(id);
+            this.dashboardData = await API.getDashboard();
+            const content = document.getElementById('main-content');
+            content.innerHTML = this.renderDashboard(this.dashboardData);
+            this.initLucideIcons();
+        } catch (error) {
+            console.error('Erro ao alternar dispositivo:', error);
+            alert('Não foi possível alterar o status agora.');
+        }
     },
     
     // Toggle sidebar
@@ -552,8 +540,7 @@ const App = {
     // Handle logout
     handleLogout() {
         if (confirm('Tem certeza que deseja sair?')) {
-            // Redirect to logout.php or handle logout
-            window.location.href = 'logout.php';
+            window.location.href = 'php/logout.php';
         }
     },
     

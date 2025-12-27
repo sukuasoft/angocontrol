@@ -9,7 +9,7 @@ const API = {
      * Fazer requisição GET
      */
     async get(endpoint, params = {}) {
-        const url = new URL(this.baseURL + endpoint, window.location.origin);
+        const url = new URL(this.baseURL + endpoint, "http://localhost/angocontrol/");
         Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
         
         try {
@@ -70,12 +70,22 @@ const API = {
      * Processar resposta
      */
     async handleResponse(response) {
+        const contentType = response.headers.get('content-type') || '';
+        const isJson = contentType.includes('application/json');
+
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Erro na requisição');
+            const payload = isJson ? await response.json().catch(() => ({})) : await response.text();
+            const message = isJson ? (payload.message || JSON.stringify(payload)) : payload?.toString().slice(0, 200);
+            throw new Error(message || 'Erro na requisição');
         }
-        
-        return await response.json();
+
+        if (isJson) {
+            return await response.json();
+        }
+
+        // Se o backend devolveu HTML (ex: redirect para login), lance erro legível
+        const text = await response.text();
+        throw new Error('Resposta inesperada do servidor: ' + text.slice(0, 200));
     },
     
     /**

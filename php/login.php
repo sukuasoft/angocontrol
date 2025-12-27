@@ -1,15 +1,6 @@
 <?php
 require_once 'config.php';
 
-// Verificar autenticação
-if (!isAuthenticated()) {
-    if (isAjax()) {
-        jsonResponse(['error' => 'Não autenticado'], 401);
-    } else {
-        header('Location: login.php');
-        exit;
-    }
-}
 
 // Processar login
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -29,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user_email'] = $user['email'];
             $_SESSION['user_role'] = $user['role'];
             
-            header('Location: ../index.html');
+            header('Location: ../index.php');
             exit;
         } else {
             $error = 'Email ou senha inválidos';
@@ -70,6 +61,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if (isset($error)): ?>
             <div style="background-color: var(--color-destructive); color: white; padding: 0.75rem; border-radius: var(--radius-md); margin-bottom: 1rem; font-size: 0.875rem;">
                 <?php echo htmlspecialchars($error); ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if (isset($_GET['registered'])): ?>
+            <div style="background-color: var(--color-primary); color: white; padding: 0.75rem; border-radius: var(--radius-md); margin-bottom: 1rem; font-size: 0.875rem;">
+                Conta criada com sucesso. Faça login para continuar.
             </div>
         <?php endif; ?>
 
