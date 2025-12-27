@@ -17,9 +17,10 @@ const App = {
     setupEventListeners() {
         // Navigation
         document.querySelectorAll('.nav-item').forEach(item => {
+            const page = item.dataset.page;
+            if (!page) return; // allow normal navigation for plain links
             item.addEventListener('click', (e) => {
                 e.preventDefault();
-                const page = item.dataset.page;
                 if (page === 'logout') {
                     this.handleLogout();
                 } else {
@@ -395,10 +396,38 @@ const App = {
     getDispositivosContent() {
         return `
             <div class="space-y-6">
-                <h1 class="text-3xl font-bold">Dispositivos</h1>
-                <p class="text-muted">Gerencie todos os seus dispositivos conectados</p>
-                <div class="card">
-                    <p>Conteúdo da página de dispositivos será carregado aqui...</p>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold">Dispositivos</h1>
+                        <p class="text-muted">Inventário dos seus dispositivos conectados</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button class="button button-primary"><i data-lucide="plus"></i> Novo dispositivo</button>
+                        <button class="button button-outline"><i data-lucide="refresh-ccw"></i> Atualizar lista</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3">
+                    <div class="card">
+                        <h3 class="card-title">Resumo</h3>
+                        <p class="card-subtitle">Estado geral dos equipamentos</p>
+                        <ul class="list" style="margin-top: var(--spacing-md);">
+                            <li><span>Total cadastrados</span><strong>—</strong></li>
+                            <li><span>Ativos</span><strong>—</strong></li>
+                            <li><span>Offline</span><strong>—</strong></li>
+                        </ul>
+                    </div>
+                    <div class="card" style="grid-column: span 2;">
+                        <div class="card-header">
+                            <h3 class="card-title">Lista de dispositivos</h3>
+                            <p class="card-subtitle">Adicione ou use “Atualizar” para carregar os dados reais</p>
+                        </div>
+                        <div class="empty-state">
+                            <i data-lucide="cpu" style="width: 2rem; height: 2rem;"></i>
+                            <p>Nenhum dispositivo carregado ainda.</p>
+                            <p class="text-muted">Clique em “Atualizar lista” para buscar no backend.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -408,9 +437,24 @@ const App = {
         return `
             <div class="space-y-6">
                 <h1 class="text-3xl font-bold">Monitoramento</h1>
-                <p class="text-muted">Acompanhe a atividade dos dispositivos em tempo real</p>
-                <div class="card">
-                    <p>Conteúdo da página de monitoramento será carregado aqui...</p>
+                <p class="text-muted">Acompanhe eventos e métricas em tempo real</p>
+
+                <div class="grid grid-cols-3">
+                    <div class="card">
+                        <h3 class="card-title">Status</h3>
+                        <p class="card-subtitle">Fluxo em tempo real</p>
+                        <p class="text-muted" style="margin-top: var(--spacing-md);">Sem dados recebidos. Aguarde eventos ou integre sensores.</p>
+                    </div>
+                    <div class="card" style="grid-column: span 2;">
+                        <div class="card-header">
+                            <h3 class="card-title">Eventos recentes</h3>
+                            <p class="card-subtitle">Logs chegam aqui quando o backend enviar</p>
+                        </div>
+                        <div class="empty-state">
+                            <i data-lucide="activity" style="width: 2rem; height: 2rem;"></i>
+                            <p>Nenhum evento no momento.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -420,9 +464,21 @@ const App = {
         return `
             <div class="space-y-6">
                 <h1 class="text-3xl font-bold">Consumo de Energia</h1>
-                <p class="text-muted">Análise detalhada do consumo energético</p>
-                <div class="card">
-                    <p>Conteúdo da página de consumo será carregado aqui...</p>
+                <p class="text-muted">Histórico e custo estimado</p>
+
+                <div class="grid grid-cols-2">
+                    <div class="card">
+                        <h3 class="card-title">Resumo</h3>
+                        <p class="text-muted">Sem leituras ainda. Adicione dados em energy_logs.</p>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title">Próximos passos</h3>
+                        <ul class="list" style="margin-top: var(--spacing-md);">
+                            <li>Conectar medidor ou enviar leituras</li>
+                            <li>Configurar alertas de pico</li>
+                            <li>Exportar CSV pelo dashboard</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         `;
@@ -432,9 +488,21 @@ const App = {
         return `
             <div class="space-y-6">
                 <h1 class="text-3xl font-bold">Segurança</h1>
-                <p class="text-muted">Controle de câmeras e sistemas de segurança</p>
-                <div class="card">
-                    <p>Conteúdo da página de segurança será carregado aqui...</p>
+                <p class="text-muted">Alertas, câmeras e fechaduras</p>
+
+                <div class="grid grid-cols-3">
+                    <div class="card">
+                        <h3 class="card-title">Alertas</h3>
+                        <p class="text-muted">Nenhum alerta crítico.</p>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title">Câmeras</h3>
+                        <p class="text-muted">Streams serão exibidos aqui.</p>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title">Acesso</h3>
+                        <p class="text-muted">Tranque/destranque dispositivos integrados.</p>
+                    </div>
                 </div>
             </div>
         `;
@@ -444,9 +512,17 @@ const App = {
         return `
             <div class="space-y-6">
                 <h1 class="text-3xl font-bold">Climatização</h1>
-                <p class="text-muted">Controle de temperatura e qualidade do ar</p>
-                <div class="card">
-                    <p>Conteúdo da página de climatização será carregado aqui...</p>
+                <p class="text-muted">Temperatura, umidade e conforto</p>
+
+                <div class="grid grid-cols-2">
+                    <div class="card">
+                        <h3 class="card-title">Alvos</h3>
+                        <p class="text-muted">Defina temperaturas por cômodo.</p>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title">Sensores</h3>
+                        <p class="text-muted">Nenhuma leitura disponível ainda.</p>
+                    </div>
                 </div>
             </div>
         `;
@@ -456,9 +532,21 @@ const App = {
         return `
             <div class="space-y-6">
                 <h1 class="text-3xl font-bold">Integrações</h1>
-                <p class="text-muted">Conecte com outros serviços e plataformas</p>
-                <div class="card">
-                    <p>Conteúdo da página de integrações será carregado aqui...</p>
+                <p class="text-muted">Conecte com plataformas e assistentes</p>
+
+                <div class="grid grid-cols-2">
+                    <div class="card">
+                        <h3 class="card-title">Disponíveis</h3>
+                        <ul class="list" style="margin-top: var(--spacing-md);">
+                            <li>Assistente de voz</li>
+                            <li>IFTTT / Webhooks</li>
+                            <li>API REST</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title">Conectadas</h3>
+                        <p class="text-muted">Nenhuma integração ativa.</p>
+                    </div>
                 </div>
             </div>
         `;
@@ -468,9 +556,17 @@ const App = {
         return `
             <div class="space-y-6">
                 <h1 class="text-3xl font-bold">Configurações</h1>
-                <p class="text-muted">Personalize suas preferências do sistema</p>
-                <div class="card">
-                    <p>Conteúdo da página de configurações será carregado aqui...</p>
+                <p class="text-muted">Preferências da conta e do app</p>
+
+                <div class="grid grid-cols-2">
+                    <div class="card">
+                        <h3 class="card-title">Perfil</h3>
+                        <p class="text-muted">Atualize nome, email e senha.</p>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title">Notificações</h3>
+                        <p class="text-muted">Configure alertas por email/push.</p>
+                    </div>
                 </div>
             </div>
         `;
@@ -481,8 +577,20 @@ const App = {
             <div class="space-y-6">
                 <h1 class="text-3xl font-bold">Suporte</h1>
                 <p class="text-muted">Central de ajuda e documentação</p>
-                <div class="card">
-                    <p>Conteúdo da página de suporte será carregado aqui...</p>
+
+                <div class="grid grid-cols-2">
+                    <div class="card">
+                        <h3 class="card-title">Ajuda rápida</h3>
+                        <ul class="list" style="margin-top: var(--spacing-md);">
+                            <li>FAQ</li>
+                            <li>Guias rápidos</li>
+                            <li>Contato</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h3 class="card-title">Status</h3>
+                        <p class="text-muted">Tudo operacional.</p>
+                    </div>
                 </div>
             </div>
         `;

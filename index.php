@@ -46,31 +46,31 @@
                 <div class="nav-section">
                     <p class="nav-label">PRINCIPAL</p>
                     <ul class="nav-menu">
-                        <li><a href="#dashboard" class="nav-item active" data-page="dashboard">
+                        <li><a href="index.php" class="nav-item active">
                             <i data-lucide="home"></i>
                             <span>Dashboard</span>
                         </a></li>
-                        <li><a href="#dispositivos" class="nav-item" data-page="dispositivos">
+                        <li><a href="php/page_dispositivos.php" class="nav-item">
                             <i data-lucide="cpu"></i>
                             <span>Dispositivos</span>
                         </a></li>
-                        <li><a href="#monitoramento" class="nav-item" data-page="monitoramento">
+                        <li><a href="php/page_monitoramento.php" class="nav-item">
                             <i data-lucide="activity"></i>
                             <span>Monitoramento</span>
                         </a></li>
-                        <li><a href="#consumo" class="nav-item" data-page="consumo">
+                        <li><a href="php/page_consumo.php" class="nav-item">
                             <i data-lucide="bar-chart-3"></i>
                             <span>Consumo</span>
                         </a></li>
-                        <li><a href="#seguranca" class="nav-item" data-page="seguranca">
+                        <li><a href="php/page_seguranca.php" class="nav-item">
                             <i data-lucide="shield"></i>
                             <span>Segurança</span>
                         </a></li>
-                        <li><a href="#climatizacao" class="nav-item" data-page="climatizacao">
+                        <li><a href="php/page_climatizacao.php" class="nav-item">
                             <i data-lucide="thermometer"></i>
                             <span>Climatização</span>
                         </a></li>
-                        <li><a href="#integracoes" class="nav-item" data-page="integracoes">
+                        <li><a href="php/page_integracoes.php" class="nav-item">
                             <i data-lucide="puzzle"></i>
                             <span>Integrações</span>
                         </a></li>
@@ -79,11 +79,11 @@
 
                 <div class="nav-section nav-bottom">
                     <ul class="nav-menu">
-                        <li><a href="#configuracoes" class="nav-item" data-page="configuracoes">
+                        <li><a href="php/page_configuracoes.php" class="nav-item">
                             <i data-lucide="settings"></i>
                             <span>Configurações</span>
                         </a></li>
-                        <li><a href="#suporte" class="nav-item" data-page="suporte">
+                        <li><a href="php/page_suporte.php" class="nav-item">
                             <i data-lucide="help-circle"></i>
                             <span>Suporte</span>
                         </a></li>
